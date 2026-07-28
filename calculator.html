@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root{
+    --paper:#eae4d6;
+    --paper-line:#d8d0bb;
+    --ink:#2b2620;
+    --machine:#1c1a17;
+    --machine-2:#26221d;
+    --amber:#ff9f1c;
+    --amber-dim:#7a5417;
+    --key:#f4efe4;
+    --key-shadow:#a89f89;
+    --op:#c9502f;
+    --op-shadow:#8a331c;
+    --eq:#3f6b53;
+    --eq-shadow:#274536;
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      radial-gradient(circle at 50% -10%, #33302a, #14120f 70%);
+    font-family:'Space Grotesk', sans-serif;
+    padding:24px;
+  }
+
+  .rig{
+    display:flex;
+    align-items:flex-start;
+    gap:0;
+  }
+
+  /* ---- Printed tape ---- */
+  .tape-wrap{
+    width:150px;
+    height:520px;
+    overflow:hidden;
+    position:relative;
+    margin-top:18px;
+    background:var(--paper);
+    box-shadow: 0 20px 40px rgba(0,0,0,.5);
+    border-radius:2px 2px 10px 10px;
+  }
+  .tape-wrap::before{
+    content:"";
+    position:absolute;
+    top:0;left:0;right:0;
+    height:14px;
+    background:repeating-linear-gradient(90deg, var(--machine) 0 8px, transparent 8px 16px);
+    z-index:2;
+  }
+  .tape{
+    position:absolute;
+    bottom:0;
+    left:0;
+    right:0;
+    padding:26px 14px 16px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--ink);
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+    transition:transform .35s ease;
+  }
+  .tape-row{
+    display:flex;
+    justify-content:space-between;
+    border-bottom:1px dashed var(--paper-line);
+    padding-bottom:7px;
+    opacity:.55;
+  }
+  .tape-row:last-child{ opacity:1; font-weight:700; }
+  .tape-row .expr{ opacity:.7; }
+  .tape-empty{
+    font-size:11px;
+    color:#9c927a;
+    text-align:center;
+    margin-top:40px;
+  }
+
+  /* ---- Machine body ---- */
+  .machine{
+    width:340px;
+    background:linear-gradient(160deg, var(--machine-2), var(--machine) 60%);
+    border-radius:18px;
+    padding:22px;
+    box-shadow:
+      0 30px 60px rgba(0,0,0,.55),
+      inset 0 1px 0 rgba(255,255,255,.05);
+    position:relative;
+  }
+
+  .brand{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:0 4px 14px;
+    color:#8b8478;
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+  }
+  .brand b{
+    color:#c7c0af;
+    font-size:12px;
+  }
+
+  .screen{
+    background:#100d0a;
+    border-radius:10px;
+    padding:20px 18px 16px;
+    margin-bottom:18px;
+    box-shadow: inset 0 4px 14px rgba(0,0,0,.7), inset 0 0 0 1px #000;
+    position:relative;
+    overflow:hidden;
+  }
+  .screen::after{
+    content:"";
+    position:absolute; inset:0;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 2px, transparent 2px 4px);
+    pointer-events:none;
+  }
+  .screen-expr{
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    color:var(--amber-dim);
+    min-height:16px;
+    text-align:right;
+    letter-spacing:.03em;
+  }
+  .screen-main{
+    font-family:'JetBrains Mono', monospace;
+    font-size:40px;
+    color:var(--amber);
+    text-align:right;
+    text-shadow:0 0 10px rgba(255,159,28,.55), 0 0 2px rgba(255,159,28,.8);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .pad{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:10px;
+  }
+
+  button{
+    border:none;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:18px;
+    font-weight:600;
+    padding:16px 0;
+    border-radius:10px;
+    cursor:pointer;
+    color:var(--ink);
+    background:var(--key);
+    box-shadow: 0 4px 0 var(--key-shadow), 0 6px 10px rgba(0,0,0,.35);
+    transition: transform .05s ease, box-shadow .05s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:active{
+    transform:translateY(3px);
+    box-shadow: 0 1px 0 var(--key-shadow), 0 2px 4px rgba(0,0,0,.35);
+  }
+
+  button.op{
+    background:var(--op);
+    color:#fce9e1;
+    box-shadow:0 4px 0 var(--op-shadow), 0 6px 10px rgba(0,0,0,.35);
+  }
+  button.op:active{ box-shadow:0 1px 0 var(--op-shadow), 0 2px 4px rgba(0,0,0,.35); }
+
+  button.eq{
+    background:var(--eq);
+    color:#e6f3ec;
+    grid-row: span 2;
+    box-shadow:0 4px 0 var(--eq-shadow), 0 6px 10px rgba(0,0,0,.35);
+  }
+  button.eq:active{ box-shadow:0 1px 0 var(--eq-shadow), 0 2px 4px rgba(0,0,0,.35); }
+
+  button.wide{ grid-column: span 2; }
+  button.muted{ color:#7d7666; font-size:15px; }
+
+  button:focus-visible{
+    outline:2px solid #fff;
+    outline-offset:2px;
+  }
+
+  @media (max-width:560px){
+    .rig{ flex-direction:column; align-items:center; }
+    .tape-wrap{ display:none; }
+    .machine{ width:100%; max-width:360px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .tape{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="rig">
+  <div class="tape-wrap">
+    <div class="tape" id="tape">
+      <div class="tape-empty">tape is empty</div>
+    </div>
+  </div>
+
+  <div class="machine">
+    <div class="brand"><span>Model&nbsp;7&nbsp;·&nbsp;Adder</span><b>÷×−+</b></div>
+
+    <div class="screen">
+      <div class="screen-expr" id="expr">&nbsp;</div>
+      <div class="screen-main" id="main">0</div>
+    </div>
+
+    <div class="pad">
+      <button class="muted" data-action="clear">C</button>
+      <button class="muted" data-action="sign">±</button>
+      <button class="muted" data-action="percent">%</button>
+      <button class="op" data-action="op" data-op="÷">÷</button>
+
+      <button data-action="num" data-num="7">7</button>
+      <button data-action="num" data-num="8">8</button>
+      <button data-action="num" data-num="9">9</button>
+      <button class="op" data-action="op" data-op="×">×</button>
+
+      <button data-action="num" data-num="4">4</button>
+      <button data-action="num" data-num="5">5</button>
+      <button data-action="num" data-num="6">6</button>
+      <button class="op" data-action="op" data-op="−">−</button>
+
+      <button data-action="num" data-num="1">1</button>
+      <button data-action="num" data-num="2">2</button>
+      <button data-action="num" data-num="3">3</button>
+      <button class="op" data-action="op" data-op="+">+</button>
+
+      <button class="wide" data-action="num" data-num="0">0</button>
+      <button data-action="decimal">.</button>
+      <button class="eq" data-action="equals">=</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const mainEl = document.getElementById('main');
+  const exprEl = document.getElementById('expr');
+  const tapeEl = document.getElementById('tape');
+
+  let current = "0";
+  let previous = null;
+  let operator = null;
+  let justEvaluated = false;
+  let history = [];
+
+  function render(){
+    mainEl.textContent = formatDisplay(current);
+    exprEl.textContent = previous !== null && operator
+      ? `${formatDisplay(previous)} ${operator}`
+      : '\u00A0';
+  }
+
+  function formatDisplay(v){
+    if (v === "Error") return v;
+    let n = Number(v);
+    if (Number.isNaN(n)) return "0";
+    let str = v.toString();
+    if (str.length > 12) {
+      n = parseFloat(n.toPrecision(10));
+      str = n.toString();
+    }
+    return str;
+  }
+
+  function inputNum(d){
+    if (current === "Error") current = "0";
+    if (justEvaluated){
+      current = d;
+      justEvaluated = false;
+    } else {
+      current = current === "0" ? d : current + d;
+    }
+    render();
+  }
+
+  function inputDecimal(){
+    if (current === "Error") current = "0";
+    if (justEvaluated){ current = "0"; justEvaluated = false; }
+    if (!current.includes(".")) current += ".";
+    render();
+  }
+
+  function inputOperator(op){
+    if (current === "Error") return;
+    if (operator && !justEvaluated){
+      evaluate(false);
+    }
+    previous = current;
+    operator = op;
+    current = "0";
+    justEvaluated = false;
+    render();
+  }
+
+  function toggleSign(){
+    if (current === "Error") return;
+    if (current !== "0") current = current.startsWith("-") ? current.slice(1) : "-" + current;
+    render();
+  }
+
+  function percent(){
+    if (current === "Error") return;
+    current = (parseFloat(current) / 100).toString();
+    render();
+  }
+
+  function clearAll(){
+    current = "0"; previous = null; operator = null; justEvaluated = false;
+    render();
+  }
+
+  function compute(a, b, op){
+    a = parseFloat(a); b = parseFloat(b);
+    switch(op){
+      case '+': return a + b;
+      case '−': return a - b;
+      case '×': return a * b;
+      case '÷': return b === 0 ? NaN : a / b;
+    }
+  }
+
+  function evaluate(logToTape = true){
+    if (operator === null || previous === null) return;
+    const result = compute(previous, current, operator);
+    const exprStr = `${formatDisplay(previous)} ${operator} ${formatDisplay(current)}`;
+
+    if (Number.isNaN(result)){
+      current = "Error";
+      previous = null; operator = null; justEvaluated = true;
+      render();
+      return;
+    }
+
+    const resultStr = parseFloat(result.toPrecision(12)).toString();
+
+    if (logToTape){
+      addTapeEntry(exprStr, resultStr);
+    }
+
+    current = resultStr;
+    previous = null;
+    operator = null;
+    justEvaluated = true;
+    render();
+  }
+
+  function addTapeEntry(expr, result){
+    history.push({expr, result});
+    if (history.length > 40) history.shift();
+    renderTape();
+  }
+
+  function renderTape(){
+    if (history.length === 0){
+      tapeEl.innerHTML = '<div class="tape-empty">tape is empty</div>';
+      return;
+    }
+    tapeEl.innerHTML = history.map(h => `
+      <div class="tape-row">
+        <span class="expr">${h.expr}</span>
+        <span>${h.result}</span>
+      </div>
+    `).join('');
+  }
+
+  document.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      if (action === 'num') inputNum(btn.dataset.num);
+      else if (action === 'decimal') inputDecimal();
+      else if (action === 'op') inputOperator(btn.dataset.op);
+      else if (action === 'equals') evaluate(true);
+      else if (action === 'clear') clearAll();
+      else if (action === 'sign') toggleSign();
+      else if (action === 'percent') percent();
+    });
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key >= '0' && e.key <= '9') inputNum(e.key);
+    else if (e.key === '.') inputDecimal();
+    else if (e.key === '+') inputOperator('+');
+    else if (e.key === '-') inputOperator('−');
+    else if (e.key === '*') inputOperator('×');
+    else if (e.key === '/') { e.preventDefault(); inputOperator('÷'); }
+    else if (e.key === 'Enter' || e.key === '=') evaluate(true);
+    else if (e.key === 'Escape') clearAll();
+    else if (e.key === '%') percent();
+    else if (e.key === 'Backspace'){
+      if (current.length > 1) current = current.slice(0, -1);
+      else current = "0";
+      render();
+    }
+  });
+
+  render();
+</script>
+
+</body>
+</html>
